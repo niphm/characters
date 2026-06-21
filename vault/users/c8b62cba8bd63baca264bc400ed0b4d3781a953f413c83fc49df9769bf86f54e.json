@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "characterId": "tidewick",
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 600000,
+    "salt": "j5CLG57CPp6DrBATe29auA=="
+  },
+  "wrap": {
+    "iv": "Wttxr2kFhsL7T63T",
+    "ciphertext": "pnuqE9fFn5THXnfuBBk/EF0z8NmZw3Ma0Y8kpWvN0rv4s1vlJ1hiKRjLi3VuTjBbEfcg/eVNUurPcwlAfg4lAYGdIgX5aQ=="
+  }
+}
