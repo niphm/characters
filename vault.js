@@ -9,7 +9,6 @@
   const status = document.getElementById('status');
   const viewer = document.getElementById('viewer');
   const frame = document.getElementById('characterFrame');
-  const characterTitle = document.getElementById('characterTitle');
   let unlockedBundle = null;
   let activeBlobUrl = null;
 
@@ -92,18 +91,6 @@
     frame.src = activeBlobUrl;
   }
 
-  function lockVault() {
-    unlockedBundle = null;
-    frame.removeAttribute('src');
-    if (activeBlobUrl) URL.revokeObjectURL(activeBlobUrl);
-    activeBlobUrl = null;
-    viewer.hidden = true;
-    loginPanel.hidden = false;
-    loginForm.reset();
-    status.textContent = '';
-    document.getElementById('username').focus();
-  }
-
   loginForm.addEventListener('submit', async event => {
     event.preventDefault();
     loginButton.disabled = true;
@@ -113,7 +100,6 @@
         document.getElementById('username').value,
         document.getElementById('password').value
       );
-      characterTitle.textContent = unlockedBundle.title || 'Character Vault';
       loginPanel.hidden = true;
       viewer.hidden = false;
       status.textContent = '';
@@ -126,10 +112,6 @@
     }
   });
 
-  document.querySelectorAll('[data-page]').forEach(button => {
-    button.addEventListener('click', () => showPage(button.dataset.page));
-  });
-  document.getElementById('logoutButton').addEventListener('click', lockVault);
   window.addEventListener('message', event => {
     if (event.data?.type === 'vault:navigate') showPage(event.data.page);
   });
@@ -138,4 +120,3 @@
     if (activeBlobUrl) URL.revokeObjectURL(activeBlobUrl);
   });
 })();
-
