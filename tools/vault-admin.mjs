@@ -141,6 +141,43 @@ async function preparePages(trackerPath, spellbookPath, inventoryPath) {
   let tracker = await readFile(trackerPath, 'utf8');
   let spellbook = await readFile(spellbookPath, 'utf8');
   let inventory = await readFile(inventoryPath, 'utf8');
+  const trackerCardIcons = [
+    '1-heart.png',
+    '1-shield.png',
+    '1-star.png',
+    '1-crystals.png',
+    '1-spellbook.png',
+    '1-crystalball.png',
+    '1-scroll.png',
+    '1-dice.png',
+    '1-skull.png'
+  ];
+  for (const file of trackerCardIcons) {
+    const iconPath = join(ROOT, 'tidewick-icons', 'cards', file);
+    try {
+      const icon = await readFile(iconPath);
+      tracker = tracker.replaceAll(`src="tidewick-icons/cards/${file}"`, `src="${dataUri('image/png', icon)}"`);
+    } catch {
+      console.warn(`Warning: ${file} was not found; a tracker card icon may not render.`);
+    }
+  }
+  const headerNavIcons = [
+    '2-stars.png',
+    '2-book.png',
+    '2-chest.png'
+  ];
+  for (const file of headerNavIcons) {
+    const iconPath = join(ROOT, 'tidewick-icons', 'nav', file);
+    try {
+      const icon = await readFile(iconPath);
+      const uri = dataUri('image/png', icon);
+      tracker = tracker.replaceAll(`src="tidewick-icons/nav/${file}"`, `src="${uri}"`);
+      spellbook = spellbook.replaceAll(`src="tidewick-icons/nav/${file}"`, `src="${uri}"`);
+      inventory = inventory.replaceAll(`src="tidewick-icons/nav/${file}"`, `src="${uri}"`);
+    } catch {
+      console.warn(`Warning: ${file} was not found; a header navigation icon may not render.`);
+    }
+  }
   const compassPath = join(dirname(spellbookPath), 'tidewick-compass-home.png');
   try {
     const compass = await readFile(compassPath);
