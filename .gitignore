@@ -1,0 +1,13 @@
+# Private plaintext sources and encrypted administrator recovery material.
+private-src/
+
+# The original standalone pages remain local editing inputs and must never be published.
+tidewick-greyholt-level-3.html
+tidewick-greyholt-level-4.html
+Tidewick Spells Level 4.html
+Tidewick Inventory Level 4.html
+Tidewick Data Level 4.html
+
+# Local operating-system clutter.
+.DS_Store
+Thumbs.db
