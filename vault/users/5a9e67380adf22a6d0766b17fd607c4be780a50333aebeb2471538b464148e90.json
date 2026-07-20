@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "characterId": "miku",
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 600000,
+    "salt": "i/5FPbX8LVkHXZ592InCeQ=="
+  },
+  "wrap": {
+    "iv": "ijSOLy42Gogm3uXg",
+    "ciphertext": "hMU6+70T5LLe9xAnSP03Z3hXVp5V78AZhgBtEq+zz5DKtWQDqDmjA3OHQmDmREYt15JRiqPy3TmYA3LZRz9cihy1DSojJg=="
+  }
+}
