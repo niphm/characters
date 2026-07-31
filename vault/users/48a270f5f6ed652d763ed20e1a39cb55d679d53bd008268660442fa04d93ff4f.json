@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "characterId": "azrael",
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 600000,
+    "salt": "OfWCZmFtLgL5sT+104mJXw=="
+  },
+  "wrap": {
+    "iv": "DmFUbMlQHLVgZ0nx",
+    "ciphertext": "D2qwMSDA7d4Ip7ILEUx+3a8u9PriCA5b101cW3pE6hhWLIJG3d7GHN6W4lfPaKFrJhJFvMC3lyKlCZDYYu4yFZFKRr//cQ=="
+  }
+}
