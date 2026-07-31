@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "characterId": "kenpachi",
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 600000,
+    "salt": "7b2rFnBD+ha42zx1KHH1KQ=="
+  },
+  "wrap": {
+    "iv": "kTt3yFjJ7e9uvS0d",
+    "ciphertext": "lDT1Ai6ls+RNcpYmw3ziQqOGfStE85pkr26/bUzBGqTgbkK3p/V/2r7bORQE3R0lFUhX3y9z+NHIXIAr2SV/t3hR+Ee8ng=="
+  }
+}
