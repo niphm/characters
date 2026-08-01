@@ -12,10 +12,19 @@ function usage() {
 Tidewick encrypted-vault administrator
 
 Create or replace a character bundle:
-  node tools/vault-admin.mjs init-character --id tidewick --tracker "private-src/tidewick-greyholt-level-4.html" --spellbook "private-src/Tidewick Spells Level 4.html" --inventory "private-src/Tidewick Inventory Level 4.html"
+  node tools/vault-admin.mjs init-character --id tidewick --tracker "private-src/tidewick-greyholt-level-4.html" --spellbook "private-src/Tidewick Spells Level 4.html" --inventory "private-src/Tidewick Inventory Level 4.html" --data "private-src/Tidewick Data Level 4.html" --journal "private-src/Tidewick Journal Level 4.html"
+
+Create a character bundle with an Attack page instead of a Spellbook:
+  node tools/vault-admin.mjs init-character --id miku --title "Miku Noelani" --tracker "private-src/miku/miku-main.html" --attack "private-src/miku/miku-attack.html" --inventory "private-src/miku/miku-inventory.html" --data "private-src/miku/miku-data.html" --journal "private-src/miku/miku-journal.html"
+
+Create a character bundle with both Spells and Attack pages:
+  node tools/vault-admin.mjs init-character --id azrael --title "Azrael Ognyan" --tracker "private-src/azrael/azrael-main.html" --spellbook "private-src/azrael/azrael-spells.html" --attack "private-src/azrael/azrael-attack.html" --inventory "private-src/azrael/azrael-inventory.html" --data "private-src/azrael/azrael-data.html" --journal "private-src/azrael/azrael-journal.html"
 
 Update an existing character bundle while preserving all logins:
-  node tools/vault-admin.mjs update-character --id tidewick --tracker "private-src/tidewick-greyholt-level-4.html" --spellbook "private-src/Tidewick Spells Level 4.html" --inventory "private-src/Tidewick Inventory Level 4.html"
+  node tools/vault-admin.mjs update-character --id tidewick --tracker "private-src/tidewick-greyholt-level-4.html" --spellbook "private-src/Tidewick Spells Level 4.html" --inventory "private-src/Tidewick Inventory Level 4.html" --data "private-src/Tidewick Data Level 4.html" --journal "private-src/Tidewick Journal Level 4.html"
+
+Validate page inputs without creating or changing a vault bundle:
+  node tools/vault-admin.mjs validate-character --id miku --tracker "private-src/miku/miku-main.html" --attack "private-src/miku/miku-attack.html" --inventory "private-src/miku/miku-inventory.html" --data "private-src/miku/miku-data.html" --journal "private-src/miku/miku-journal.html"
 
 Add or replace a login:
   node tools/vault-admin.mjs add-user --character tidewick --username david
@@ -137,90 +146,151 @@ document.addEventListener('click',event=>{
   return html.includes('</body>') ? html.replace('</body>', `${bridge}</body>`) : `${html}${bridge}`;
 }
 
-async function preparePages(trackerPath, spellbookPath, inventoryPath) {
+async function preparePages(trackerPath, spellbookPath, inventoryPath, dataPath, journalPath) {
   let tracker = await readFile(trackerPath, 'utf8');
   let spellbook = await readFile(spellbookPath, 'utf8');
   let inventory = await readFile(inventoryPath, 'utf8');
-  const trackerCardIcons = [
-    '1-heart.png',
-    '1-shield.png',
-    '1-star.png',
-    '1-crystals.png',
-    '1-spellbook.png',
-    '1-crystalball.png',
-    '1-scroll.png',
-    '1-dice.png',
-    '1-skull.png'
-  ];
-  for (const file of trackerCardIcons) {
-    const iconPath = join(ROOT, 'tidewick-icons', 'cards', file);
-    try {
-      const icon = await readFile(iconPath);
-      tracker = tracker.replaceAll(`src="tidewick-icons/cards/${file}"`, `src="${dataUri('image/png', icon)}"`);
-    } catch {
-      console.warn(`Warning: ${file} was not found; a tracker card icon may not render.`);
-    }
-  }
-  const headerNavIcons = [
-    '2-stars.png',
-    '2-book.png',
-    '2-chest.png'
-  ];
-  for (const file of headerNavIcons) {
-    const iconPath = join(ROOT, 'tidewick-icons', 'nav', file);
-    try {
-      const icon = await readFile(iconPath);
-      const uri = dataUri('image/png', icon);
-      tracker = tracker.replaceAll(`src="tidewick-icons/nav/${file}"`, `src="${uri}"`);
-      spellbook = spellbook.replaceAll(`src="tidewick-icons/nav/${file}"`, `src="${uri}"`);
-      inventory = inventory.replaceAll(`src="tidewick-icons/nav/${file}"`, `src="${uri}"`);
-    } catch {
-      console.warn(`Warning: ${file} was not found; a header navigation icon may not render.`);
-    }
-  }
-  const compassPath = join(dirname(spellbookPath), 'tidewick-compass-home.png');
-  try {
-    const compass = await readFile(compassPath);
-    spellbook = spellbook.replaceAll('src="tidewick-compass-home.png"', `src="${dataUri('image/png', compass)}"`);
-  } catch {
-    console.warn(`Warning: ${basename(compassPath)} was not found; the spellbook home icon may not render.`);
-  }
+  let data = await readFile(dataPath, 'utf8');
+  let journal = await readFile(journalPath, 'utf8');
+  const sharedCss = await readFile(join(ROOT, 'tidewick-fantasy.css'), 'utf8');
+  const inlineSharedCss = html => html.replace(/<link rel="stylesheet" href="(?:\.\.\/)?tidewick-fantasy\.css">/g, `<style>${sharedCss}</style>`);
+  tracker = inlineSharedCss(tracker);
+  spellbook = inlineSharedCss(spellbook);
+  inventory = inlineSharedCss(inventory);
+  data = inlineSharedCss(data);
+  journal = inlineSharedCss(journal);
+  tracker = await inlineLocalImages(tracker, trackerPath);
+  spellbook = await inlineLocalImages(spellbook, spellbookPath);
+  inventory = await inlineLocalImages(inventory, inventoryPath);
+  data = await inlineLocalImages(data, dataPath);
+  journal = await inlineLocalImages(journal, journalPath);
 
   tracker = tracker
     .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
     .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
+    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
+    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
     .replace(/<link rel="manifest"[^>]*>/g, '')
     .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
   spellbook = spellbook
     .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
     .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
+    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
+    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
     .replace(/<link rel="manifest"[^>]*>/g, '')
     .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
   inventory = inventory
     .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
     .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
+    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
+    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
+    .replace(/<link rel="manifest"[^>]*>/g, '')
+    .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
+  data = data
+    .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
+    .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
+    .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
+    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
+    .replace(/<link rel="manifest"[^>]*>/g, '')
+    .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
+  journal = journal
+    .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
+    .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
+    .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
+    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
     .replace(/<link rel="manifest"[^>]*>/g, '')
     .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
 
   return {
     tracker: {html: injectBridge(tracker)},
     spellbook: {html: injectBridge(spellbook)},
-    inventory: {html: injectBridge(inventory)}
+    inventory: {html: injectBridge(inventory)},
+    data: {html: injectBridge(data)},
+    journal: {html: injectBridge(journal)}
   };
 }
 
+async function inlineLocalImages(html, sourcePath) {
+  const sources = [...new Set([
+    ...[...html.matchAll(/src="([^"]+)"/g)].map(match => match[1]),
+    ...[...html.matchAll(/["']((?:\.\.\/|\.\/)[^"'<>]+\.(?:png|svg|jpe?g|webp))["']/gi)].map(match => match[1])
+  ])];
+  for (const source of sources) {
+    if (source.includes('${') || /^(?:data:|https?:|blob:|#)/i.test(source)) continue;
+    const imagePath = resolve(dirname(sourcePath), decodeURIComponent(source));
+    try {
+      const bytes = await readFile(imagePath);
+      const lower = source.toLowerCase();
+      const mime = lower.endsWith('.svg') ? 'image/svg+xml'
+        : lower.endsWith('.jpg') || lower.endsWith('.jpeg') ? 'image/jpeg'
+        : lower.endsWith('.webp') ? 'image/webp'
+        : 'image/png';
+      const uri = dataUri(mime, bytes);
+      html = html
+        .replaceAll(`"${source}"`, `"${uri}"`)
+        .replaceAll(`'${source}'`, `'${uri}'`);
+    } catch {
+      console.warn(`Warning: ${source} was not found; an image may not render.`);
+    }
+  }
+  return html;
+}
+
+async function prepareLocalThemePages(paths) {
+  const pages = {};
+  for (const [name, sourcePath] of Object.entries(paths)) {
+    let html = await readFile(sourcePath, 'utf8');
+    const stylesheet = html.match(/<link rel="stylesheet" href="([^"]+\.css)">/i);
+    if (!stylesheet) throw new Error(`${basename(sourcePath)} is missing its local character stylesheet.`);
+    const themePath = resolve(dirname(sourcePath), decodeURIComponent(stylesheet[1]));
+    const theme = await readFile(themePath, 'utf8');
+    html = html
+      .replace(stylesheet[0], `<style>${theme}</style>`)
+      .replace(/<link rel="manifest"[^>]*>/g, '')
+      .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
+    html = await inlineLocalImages(html, sourcePath);
+    pages[name] = {html: injectBridge(html)};
+  }
+  return pages;
+}
+
+function resolvePageInputs(args) {
+  if (!args.id || !args.tracker || (!args.attack && !args.spellbook) || !args.inventory || !args.data || !args.journal) {
+    throw new Error('Missing --id, --tracker, at least one of --spellbook or --attack, --inventory, --data, or --journal.');
+  }
+  const pagePaths = {
+    tracker: resolve(ROOT, args.tracker),
+    ...(args.spellbook ? {spells: resolve(ROOT, args.spellbook)} : {}),
+    ...(args.attack ? {attack: resolve(ROOT, args.attack)} : {}),
+    inventory: resolve(ROOT, args.inventory),
+    data: resolve(ROOT, args.data),
+    journal: resolve(ROOT, args.journal)
+  };
+  return {
+    pagePaths,
+    trackerPath: pagePaths.tracker,
+    secondaryPath: args.attack ? pagePaths.attack : pagePaths.spells,
+    inventoryPath: pagePaths.inventory,
+    dataPath: pagePaths.data,
+    journalPath: pagePaths.journal,
+    usesAttack: Boolean(args.attack)
+  };
+}
+
+async function readPreparedPages(inputs) {
+  await Promise.all(Object.values(inputs.pagePaths).map(path => access(path)));
+  return inputs.usesAttack
+    ? prepareLocalThemePages(inputs.pagePaths)
+    : preparePages(inputs.trackerPath, inputs.secondaryPath, inputs.inventoryPath, inputs.dataPath, inputs.journalPath);
+}
+
 async function initCharacter(args) {
-  if (!args.id || !args.tracker || !args.spellbook || !args.inventory) throw new Error('Missing --id, --tracker, --spellbook, or --inventory.');
+  const pageInputs = resolvePageInputs(args);
   const id = args.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-  const trackerPath = resolve(ROOT, args.tracker);
-  const spellbookPath = resolve(ROOT, args.spellbook);
-  const inventoryPath = resolve(ROOT, args.inventory);
-  await access(trackerPath);
-  await access(spellbookPath);
-  await access(inventoryPath);
+  await Promise.all(Object.values(pageInputs.pagePaths).map(path => access(path)));
   const adminPassword = await confirmedSecret('Administrator recovery passphrase', 'VAULT_ADMIN_PASSWORD');
   const characterKey = randomBytes(32);
-  const pages = await preparePages(trackerPath, spellbookPath, inventoryPath);
+  const pages = await readPreparedPages(pageInputs);
   const payload = {
     version: VERSION,
     id,
@@ -266,18 +336,13 @@ async function recoverCharacterKey(characterId) {
 }
 
 async function updateCharacter(args) {
-  if (!args.id || !args.tracker || !args.spellbook || !args.inventory) throw new Error('Missing --id, --tracker, --spellbook, or --inventory.');
+  const pageInputs = resolvePageInputs(args);
   const id = args.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-  const trackerPath = resolve(ROOT, args.tracker);
-  const spellbookPath = resolve(ROOT, args.spellbook);
-  const inventoryPath = resolve(ROOT, args.inventory);
-  await access(trackerPath);
-  await access(spellbookPath);
-  await access(inventoryPath);
+  await Promise.all(Object.values(pageInputs.pagePaths).map(path => access(path)));
   await access(join(ROOT, 'vault', 'characters', `${id}.json`));
 
   const characterKey = await recoverCharacterKey(id);
-  const pages = await preparePages(trackerPath, spellbookPath, inventoryPath);
+  const pages = await readPreparedPages(pageInputs);
   const payload = {
     version: VERSION,
     id,
@@ -292,6 +357,19 @@ async function updateCharacter(args) {
     JSON.stringify({version: VERSION, encrypted}, null, 2)
   );
   console.log(`Updated vault/characters/${id}.json without changing existing logins.`);
+}
+
+async function validateCharacter(args) {
+  const pageInputs = resolvePageInputs(args);
+  const pages = await readPreparedPages(pageInputs);
+  for (const [name, page] of Object.entries(pages)) {
+    if (!page.html.includes('<style>')) throw new Error(`${name} did not include its local theme.`);
+    if (/src="(?:\.\.\/|\.\/)/.test(page.html)) throw new Error(`${name} still contains a relative image source.`);
+    if (/["'](?:\.\.\/|\.\/)[^"'<>]+\.(?:png|svg|jpe?g|webp)["']/i.test(page.html)) {
+      throw new Error(`${name} still contains a relative image reference.`);
+    }
+  }
+  console.log(`Validated ${Object.keys(pages).length} character pages without writing vault data.`);
 }
 
 async function addUser(args) {
@@ -324,6 +402,7 @@ const command = args._[0];
 try {
   if (command === 'init-character') await initCharacter(args);
   else if (command === 'update-character') await updateCharacter(args);
+  else if (command === 'validate-character') await validateCharacter(args);
   else if (command === 'add-user') await addUser(args);
   else usage();
 } catch (error) {
