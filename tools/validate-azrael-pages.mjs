@@ -74,16 +74,30 @@ for (const tracker of ['channelDivinityUsed', 'warPriestUsed', 'level1Used', 'le
   check(main.includes(`data-toggle-array="${tracker}"`), `azrael-main.html: missing ${tracker} controls`);
 }
 check(main.includes("state.channelDivinityUsed = (state.channelDivinityUsed || []).slice(0, -1);"), 'azrael-main.html: short rest must restore exactly one Channel Divinity use');
+check((main.match(/data-channel-option="/g) || []).length === 3, 'azrael-main.html: expected three Channel Divinity option links');
+for (const option of ['Divine Spark', 'Turn Undead', 'Guided Strike']) {
+  check(main.includes(`>${option}</button>`), `azrael-main.html: missing ${option} modal link`);
+}
+check(main.includes('id="channelDivinityModal" aria-hidden="true"'), 'azrael-main.html: Channel Divinity modal is missing');
+check(main.includes('role="dialog" aria-modal="true"'), 'azrael-main.html: Channel Divinity modal lacks accessible dialog semantics');
+check(main.includes("event.key === 'Escape'"), 'azrael-main.html: Channel Divinity modal cannot be closed with Escape');
+check(!main.includes('>Cleric Features</h2>'), 'azrael-main.html: Cleric Features card should be removed');
+check(main.indexOf('>War Priest</h2>') < main.indexOf('>Channel Divinity</h2>'), 'azrael-main.html: War Priest card must appear before Channel Divinity');
 for (const score of ['14', '10', '13', '8', '16', '12']) check(main.includes(`attribute-score">${score}<`), `azrael-main.html: missing ability score ${score}`);
 
 const spellbook = await readFile(join(SOURCE, 'azrael-spells.html'), 'utf8');
-for (const spell of ['Thaumaturgy', 'Poison Spray', 'Guidance', 'Sacred Flame', 'Resistance', 'Toll the Dead', 'Ray of Sickness', 'Fog Cloud', 'Thunderwave', 'Sanctuary', 'Command', 'Healing Word', 'Cure Wounds', 'Gust of Wind', 'Aid', 'Hold Person', 'Spiritual Weapon', 'Shatter', 'Thunderous Rebuke', 'Divinity']) {
+for (const spell of ['Thaumaturgy', 'Poison Spray', 'Guidance', 'Sacred Flame', 'Resistance', 'Toll the Dead', 'Ray of Sickness', 'Fog Cloud', 'Thunderwave', 'Sanctuary', 'Command', 'Healing Word', 'Cure Wounds', 'Gust of Wind', 'Aid', 'Hold Person', 'Spiritual Weapon', 'Shatter', 'Thunderous Rebuke', 'Divine Spark', 'Turn Undead']) {
   check(spellbook.includes(`name:'${spell}'`), `azrael-spells.html: missing ${spell}`);
 }
 check(!/classes:\[[^\]]*'attack'/.test(spellbook), 'azrael-spells.html: spell records must not inherit Attack page card styling');
 for (const spell of ['Poison Spray', 'Ray of Sickness', 'Spiritual Weapon']) {
   check(new RegExp(`name:'${spell}'[^\\n]+classes:\\[[^\\]]*'spell-attack'`).test(spellbook), `azrael-spells.html: ${spell} is missing its spell-specific attack tag`);
 }
+check(spellbook.includes('const formatMarkdown = value => escapeHtml(value)'), 'azrael-spells.html: safe Markdown formatter is missing');
+check(spellbook.includes(".replace(/\\*\\*([^*\\n]+?)\\*\\*/g, '<strong>$1</strong>')"), 'azrael-spells.html: bold Markdown support is missing');
+check(spellbook.includes(".replace(/\\*([^*\\n]+?)\\*/g, '<em>$1</em>')"), 'azrael-spells.html: italic Markdown support is missing');
+check(spellbook.includes(".replace(/\\r?\\n/g, '<br>')"), 'azrael-spells.html: Markdown line-break support is missing');
+check(spellbook.includes('<div class="spell-value">${formatMarkdown(value)}</div>'), 'azrael-spells.html: spell details do not use the safe Markdown formatter');
 
 const attack = await readFile(join(SOURCE, 'azrael-attack.html'), 'utf8');
 for (const weapon of ['Warhammer', 'Sickle', 'Longbow']) check(attack.includes(`name:'${weapon}'`), `azrael-attack.html: missing seeded ${weapon}`);
