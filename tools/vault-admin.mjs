@@ -373,6 +373,9 @@ async function validateCharacter(args) {
     if (/["'](?:\.\.\/|\.\/)[^"'<>]+\.(?:png|svg|jpe?g|webp)["']/i.test(page.html)) {
       throw new Error(`${name} still contains a relative image reference.`);
     }
+    if (/`(?:\.\.\/|\.\/)[^`<>]+\.(?:png|svg|jpe?g|webp)`/i.test(page.html)) {
+      throw new Error(`${name} still contains a dynamic relative image reference.`);
+    }
   }
   console.log(`Validated ${Object.keys(pages).length} character pages without writing vault data.`);
 }
