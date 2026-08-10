@@ -3,7 +3,7 @@ import {readFile, readdir} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
-const CHARACTERS = ['tidewick', 'miku', 'kenpachi', 'azrael'];
+const CHARACTERS = ['tidewick', 'miku', 'kenpachi', 'azrael', 'hestia'];
 const failures = [];
 
 const check = (condition, message) => {
