@@ -279,7 +279,12 @@ function resolvePageInputs(args) {
 
 async function readPreparedPages(inputs) {
   await Promise.all(Object.values(inputs.pagePaths).map(path => access(path)));
-  return inputs.usesAttack
+  const secondaryHtml = await readFile(inputs.secondaryPath, 'utf8');
+  const stylesheet = secondaryHtml.match(/<link rel="stylesheet" href="([^"]+\.css)">/i);
+  const usesCharacterTheme = Boolean(
+    stylesheet && basename(decodeURIComponent(stylesheet[1])).toLowerCase() !== 'tidewick-fantasy.css'
+  );
+  return inputs.usesAttack || usesCharacterTheme
     ? prepareLocalThemePages(inputs.pagePaths)
     : preparePages(inputs.trackerPath, inputs.secondaryPath, inputs.inventoryPath, inputs.dataPath, inputs.journalPath);
 }

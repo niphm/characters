@@ -1,0 +1,19 @@
+Icons selected from “D&D Item Icons by Gwill”:
+https://github.com/Gwillewyn/dnd-item-icons-by-gwill
+
+Files used:
+- Library/Armour/Shield (round).svg
+- Library/Books and Scrolls/Magic Book - Pearl.svg
+- Library/Magical Items/Bag of Holding - Small.svg
+- Library/Treasure/Copper (cp).svg
+- Library/Treasure/Silver (sp).svg
+- Library/Treasure/Electrum (ep).svg
+- Library/Treasure/Gold (gp).svg
+- Library/Treasure/Platinum (pp).svg
+
+The source repository states that most icons are adapted from artwork
+from game-icons.net and are licensed under CC BY 3.0:
+https://creativecommons.org/licenses/by/3.0/
+Shining sword icon by Lorc, from Game-icons.net, licensed under CC BY 3.0.
+https://game-icons.net/1x1/lorc/shining-sword.html
+https://creativecommons.org/licenses/by/3.0/

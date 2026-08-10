@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "characterId": "hestia",
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 600000,
+    "salt": "QLL7sAdQO5Z2kLs2Gd8gow=="
+  },
+  "wrap": {
+    "iv": "rguGuRO8ybIKD+P+",
+    "ciphertext": "THlwsVrUHYqrmhD0Bb4AJdxWsmKL1HAaiujNxf7c6hxpdv0ts6hRYab2szSQcBZnzAwK8gQT2RVwaYSKG8nrzV6iguuD2w=="
+  }
+}
