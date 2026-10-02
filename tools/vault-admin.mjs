@@ -146,73 +146,6 @@ document.addEventListener('click',event=>{
   return html.includes('</body>') ? html.replace('</body>', `${bridge}</body>`) : `${html}${bridge}`;
 }
 
-async function preparePages(trackerPath, spellbookPath, inventoryPath, dataPath, journalPath) {
-  let tracker = await readFile(trackerPath, 'utf8');
-  let spellbook = await readFile(spellbookPath, 'utf8');
-  let inventory = await readFile(inventoryPath, 'utf8');
-  let data = await readFile(dataPath, 'utf8');
-  let journal = await readFile(journalPath, 'utf8');
-  const sharedCss = await readFile(join(ROOT, 'tidewick-fantasy.css'), 'utf8');
-  const vendorCss = await readFile(join(ROOT, 'private-src', 'tidewick-vendor.css'), 'utf8');
-  const inlineSharedCss = html => html
-    .replace(/<link rel="stylesheet" href="tidewick-vendor\.css">/g, () => `<style>${vendorCss}</style>`)
-    .replace(/<link rel="stylesheet" href="(?:\.\.\/)?tidewick-fantasy\.css">/g, () => `<style>${sharedCss}</style>`);
-  tracker = inlineSharedCss(tracker);
-  spellbook = inlineSharedCss(spellbook);
-  inventory = inlineSharedCss(inventory);
-  data = inlineSharedCss(data);
-  journal = inlineSharedCss(journal);
-  tracker = await inlineLocalImages(tracker, trackerPath);
-  spellbook = await inlineLocalImages(spellbook, spellbookPath);
-  inventory = await inlineLocalImages(inventory, inventoryPath);
-  data = await inlineLocalImages(data, dataPath);
-  journal = await inlineLocalImages(journal, journalPath);
-
-  tracker = tracker
-    .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
-    .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
-    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
-    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
-    .replace(/<link rel="manifest"[^>]*>/g, '')
-    .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
-  spellbook = spellbook
-    .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
-    .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
-    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
-    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
-    .replace(/<link rel="manifest"[^>]*>/g, '')
-    .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
-  inventory = inventory
-    .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
-    .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
-    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
-    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
-    .replace(/<link rel="manifest"[^>]*>/g, '')
-    .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
-  data = data
-    .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
-    .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
-    .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
-    .replace(/href="Tidewick%20Journal%20Level%204\.html"/g, 'href="#journal" data-vault-page="journal"')
-    .replace(/<link rel="manifest"[^>]*>/g, '')
-    .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
-  journal = journal
-    .replace(/href="tidewick-greyholt-level-4\.html"/g, 'href="#tracker" data-vault-page="tracker"')
-    .replace(/href="Tidewick%20Spells%20Level%204\.html"/g, 'href="#spellbook" data-vault-page="spellbook"')
-    .replace(/href="Tidewick%20Inventory%20Level%204\.html"/g, 'href="#inventory" data-vault-page="inventory"')
-    .replace(/href="Tidewick%20Data%20Level%204\.html"/g, 'href="#data" data-vault-page="data"')
-    .replace(/<link rel="manifest"[^>]*>/g, '')
-    .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
-
-  return {
-    tracker: {html: injectBridge(tracker)},
-    spellbook: {html: injectBridge(spellbook)},
-    inventory: {html: injectBridge(inventory)},
-    data: {html: injectBridge(data)},
-    journal: {html: injectBridge(journal)}
-  };
-}
-
 async function inlineLocalImages(html, sourcePath) {
   const sources = [...new Set([
     ...[...html.matchAll(/src="([^"]+)"/g)].map(match => match[1]),
@@ -239,16 +172,33 @@ async function inlineLocalImages(html, sourcePath) {
   return html;
 }
 
+// Inline every local stylesheet and script (e.g. ../shared/base.css and the character theme) so each
+// page is self-contained inside the encrypted bundle. Images inside inlined CSS are not rewritten,
+// so shared stylesheets must not reference local images.
+async function inlineLocalAssets(html, sourcePath) {
+  const isLocal = target => !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(target);
+  const load = target => readFile(resolve(dirname(sourcePath), decodeURIComponent(target)), 'utf8');
+  for (const [tag, href] of [...html.matchAll(/<link rel="stylesheet" href="([^"]+\.css)">/gi)].map(m => [m[0], m[1]])) {
+    if (!isLocal(href)) continue;
+    const css = await load(href);
+    if (/<\/style/i.test(css)) throw new Error(`${href} contains "</style", which cannot be inlined.`);
+    html = html.replace(tag, () => `<style>${css}</style>`);
+  }
+  for (const [tag, src] of [...html.matchAll(/<script src="([^"]+\.js)"><\/script>/gi)].map(m => [m[0], m[1]])) {
+    if (!isLocal(src)) continue;
+    const js = await load(src);
+    if (/<\/script/i.test(js)) throw new Error(`${src} contains "</script", which cannot be inlined.`);
+    html = html.replace(tag, () => `<script>${js}</script>`);
+  }
+  return html;
+}
+
 async function prepareLocalThemePages(paths) {
   const pages = {};
   for (const [name, sourcePath] of Object.entries(paths)) {
     let html = await readFile(sourcePath, 'utf8');
-    const stylesheet = html.match(/<link rel="stylesheet" href="([^"]+\.css)">/i);
-    if (!stylesheet) throw new Error(`${basename(sourcePath)} is missing its local character stylesheet.`);
-    const themePath = resolve(dirname(sourcePath), decodeURIComponent(stylesheet[1]));
-    const theme = await readFile(themePath, 'utf8');
-    html = html
-      .replace(stylesheet[0], () => `<style>${theme}</style>`)
+    if (!/<link rel="stylesheet" href="[^"]+\.css">/i.test(html)) throw new Error(`${basename(sourcePath)} is missing its character stylesheet.`);
+    html = (await inlineLocalAssets(html, sourcePath))
       .replace(/<link rel="manifest"[^>]*>/g, '')
       .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
     html = await inlineLocalImages(html, sourcePath);
@@ -269,27 +219,12 @@ function resolvePageInputs(args) {
     data: resolve(ROOT, args.data),
     journal: resolve(ROOT, args.journal)
   };
-  return {
-    pagePaths,
-    trackerPath: pagePaths.tracker,
-    secondaryPath: args.attack ? pagePaths.attack : pagePaths.spells,
-    inventoryPath: pagePaths.inventory,
-    dataPath: pagePaths.data,
-    journalPath: pagePaths.journal,
-    usesAttack: Boolean(args.attack)
-  };
+  return {pagePaths};
 }
 
 async function readPreparedPages(inputs) {
   await Promise.all(Object.values(inputs.pagePaths).map(path => access(path)));
-  const secondaryHtml = await readFile(inputs.secondaryPath, 'utf8');
-  const stylesheets = [...secondaryHtml.matchAll(/<link rel="stylesheet" href="([^"]+\.css)">/gi)]
-    .map(match => basename(decodeURIComponent(match[1])).toLowerCase());
-  // Tidewick's pages link the shared tidewick-fantasy.css (alongside tidewick-vendor.css); other characters link only their own theme.
-  const usesCharacterTheme = stylesheets.length > 0 && !stylesheets.includes('tidewick-fantasy.css');
-  return inputs.usesAttack || usesCharacterTheme
-    ? prepareLocalThemePages(inputs.pagePaths)
-    : preparePages(inputs.trackerPath, inputs.secondaryPath, inputs.inventoryPath, inputs.dataPath, inputs.journalPath);
+  return prepareLocalThemePages(inputs.pagePaths);
 }
 
 async function initCharacter(args) {

@@ -10,8 +10,7 @@ material under `private-src/` are excluded by `.gitignore`.
 - User passwords derive AES wrapping keys using PBKDF2-HMAC-SHA-256 with 600,000
   iterations and a random salt.
 - Each user record unlocks one character key.
-- The browser retains decrypted content only in memory until the player taps Lock (in the bar under
-  the character page) or leaves the page.
+- The browser retains decrypted content only in memory until the player leaves or closes the page.
 - GitHub Pages receives ciphertext, not plaintext character HTML.
 
 Because the encrypted files are public, attackers can attempt password guesses offline.
@@ -81,14 +80,16 @@ encrypted character file while preserving all existing usernames and passwords.
 - Every image is embedded into each page of the encrypted bundle, so keep icons small. Icons
   display at 23-42 CSS px; they are stored at 128 px (the login logo at 336 px). Full-size
   originals are kept in `private-src/source-art/`. Resize any new artwork the same way.
-- Tidewick's pages use `private-src/tidewick-vendor.css`, a pinned local copy of the daisyUI and
-  Tailwind styles they once downloaded from a CDN. It contains only the classes the pages use, so a
-  newly added daisyUI or Tailwind class will not be styled until that file is regenerated.
+- Every character page links `private-src/shared/base.css` (shared layout) and its own theme file
+  (for example `private-src/hestia/hestia-theme.css`), which sets that character's colours and adds
+  its unique rules. Keep colours in the theme files so the characters stay distinct.
+- Page behaviour comes from shared scripts in `private-src/shared/` (`tracker.js`, `journal.js`,
+  `inventory.js`, `attack.js`, `data.js`, `spellbook.js`, all after `app.js`). Each page sets
+  `window.PAGE` with its own storage keys and rest rules first; the comment at the top of each script
+  lists the settings it needs.
+- The vault tool inlines every local stylesheet, script and image into the encrypted bundle.
+- After editing any page, run `node tools/validate-pages.mjs`. It checks all five characters,
+  including that each page still uses the same saved-data keys (a changed key would hide a
+  player's saved progress).
 - `validate-character` fails if a page still links a stylesheet that was not inlined or loads an
   outside script, so the vault never depends on another website.
-
-# Backup reminder
-
-Each Data page records when the player last exported a backup (`<character>-last-backup-v1` in
-browser storage). The bar under the character page shows that date and turns gold after 14 days
-or when no backup exists; tapping it opens the Data page.

@@ -9,9 +9,6 @@
   const status = document.getElementById('status');
   const viewer = document.getElementById('viewer');
   const frame = document.getElementById('characterFrame');
-  const backupNote = document.getElementById('backupNote');
-  const lockButton = document.getElementById('lockButton');
-  const BACKUP_REMINDER_DAYS = 14;
   let unlockedBundle = null;
   let activeBlobUrl = null;
   let activePage = null;
@@ -141,7 +138,6 @@
     if (previousUrl) URL.revokeObjectURL(previousUrl);
     if (addHistory && pageName !== activePage) history.pushState({vaultPage: pageName}, '');
     activePage = pageName;
-    updateBackupNote();
   }
 
   function lockVault() {
@@ -154,26 +150,6 @@
     activeBlobUrl = null;
     viewer.hidden = true;
     loginPanel.hidden = false;
-  }
-
-  function updateBackupNote() {
-    if (!unlockedBundle?.pages?.data) {
-      backupNote.hidden = true;
-      return;
-    }
-    let savedAt = NaN;
-    try {
-      savedAt = Date.parse(localStorage.getItem(`${unlockedBundle.id}-last-backup-v1`));
-    } catch {}
-    const days = Number.isFinite(savedAt) ? Math.max(0, Math.floor((Date.now() - savedAt) / 86400000)) : null;
-    const overdue = days === null || days >= BACKUP_REMINDER_DAYS;
-    backupNote.textContent = days === null ? 'No backup yet · Back up now'
-      : overdue ? `Last backup ${days} days ago · Back up now`
-      : days === 0 ? 'Backed up today'
-      : days === 1 ? 'Backed up yesterday'
-      : `Backed up ${days} days ago`;
-    backupNote.classList.toggle('overdue', overdue);
-    backupNote.hidden = false;
   }
 
   // Asks the browser not to clear this site's saved character data under storage pressure.
@@ -207,24 +183,12 @@
     }
   });
 
-  lockButton.addEventListener('click', () => {
-    if (!confirm('Lock the vault? You’ll need your password to open it again.')) return;
-    lockVault();
-    history.replaceState(null, '');
-    document.getElementById('password').focus();
-  });
-  backupNote.addEventListener('click', () => showPage('data', {addHistory: true}));
-
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow) return;
     if (event.data?.type === 'vault:navigate') showPage(event.data.page, {addHistory: true});
   });
   window.addEventListener('popstate', event => {
     if (unlockedBundle && event.state?.vaultPage) showPage(event.state.vaultPage);
-  });
-  // The Data page records each backup; refresh the reminder when it does.
-  window.addEventListener('storage', event => {
-    if (event.key?.endsWith('-last-backup-v1')) updateBackupNote();
   });
   // Leaving the page drops the decrypted character from memory; a page restored from the
   // back/forward cache therefore comes back locked rather than half-unlocked.
