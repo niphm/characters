@@ -10,7 +10,8 @@ material under `private-src/` are excluded by `.gitignore`.
 - User passwords derive AES wrapping keys using PBKDF2-HMAC-SHA-256 with 600,000
   iterations and a random salt.
 - Each user record unlocks one character key.
-- The browser retains decrypted content only in memory until logout or page closure.
+- The browser retains decrypted content only in memory until the player taps Lock (in the bar under
+  the character page) or leaves the page.
 - GitHub Pages receives ciphertext, not plaintext character HTML.
 
 Because the encrypted files are public, attackers can attempt password guesses offline.
@@ -74,3 +75,20 @@ publishing, confirm that no plaintext HTML or `private-src/` files are staged.
 After editing any private character page, double-click `Update Tidewick Vault.cmd`.
 Enter the administrator recovery passphrase when prompted. This rebuilds the
 encrypted character file while preserving all existing usernames and passwords.
+
+# Images and shared styles
+
+- Every image is embedded into each page of the encrypted bundle, so keep icons small. Icons
+  display at 23-42 CSS px; they are stored at 128 px (the login logo at 336 px). Full-size
+  originals are kept in `private-src/source-art/`. Resize any new artwork the same way.
+- Tidewick's pages use `private-src/tidewick-vendor.css`, a pinned local copy of the daisyUI and
+  Tailwind styles they once downloaded from a CDN. It contains only the classes the pages use, so a
+  newly added daisyUI or Tailwind class will not be styled until that file is regenerated.
+- `validate-character` fails if a page still links a stylesheet that was not inlined or loads an
+  outside script, so the vault never depends on another website.
+
+# Backup reminder
+
+Each Data page records when the player last exported a backup (`<character>-last-backup-v1` in
+browser storage). The bar under the character page shows that date and turns gold after 14 days
+or when no backup exists; tapping it opens the Data page.
