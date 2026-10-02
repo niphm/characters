@@ -153,7 +153,10 @@ async function preparePages(trackerPath, spellbookPath, inventoryPath, dataPath,
   let data = await readFile(dataPath, 'utf8');
   let journal = await readFile(journalPath, 'utf8');
   const sharedCss = await readFile(join(ROOT, 'tidewick-fantasy.css'), 'utf8');
-  const inlineSharedCss = html => html.replace(/<link rel="stylesheet" href="(?:\.\.\/)?tidewick-fantasy\.css">/g, `<style>${sharedCss}</style>`);
+  const vendorCss = await readFile(join(ROOT, 'private-src', 'tidewick-vendor.css'), 'utf8');
+  const inlineSharedCss = html => html
+    .replace(/<link rel="stylesheet" href="tidewick-vendor\.css">/g, () => `<style>${vendorCss}</style>`)
+    .replace(/<link rel="stylesheet" href="(?:\.\.\/)?tidewick-fantasy\.css">/g, () => `<style>${sharedCss}</style>`);
   tracker = inlineSharedCss(tracker);
   spellbook = inlineSharedCss(spellbook);
   inventory = inlineSharedCss(inventory);
@@ -245,7 +248,7 @@ async function prepareLocalThemePages(paths) {
     const themePath = resolve(dirname(sourcePath), decodeURIComponent(stylesheet[1]));
     const theme = await readFile(themePath, 'utf8');
     html = html
-      .replace(stylesheet[0], `<style>${theme}</style>`)
+      .replace(stylesheet[0], () => `<style>${theme}</style>`)
       .replace(/<link rel="manifest"[^>]*>/g, '')
       .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
     html = await inlineLocalImages(html, sourcePath);
@@ -280,10 +283,10 @@ function resolvePageInputs(args) {
 async function readPreparedPages(inputs) {
   await Promise.all(Object.values(inputs.pagePaths).map(path => access(path)));
   const secondaryHtml = await readFile(inputs.secondaryPath, 'utf8');
-  const stylesheet = secondaryHtml.match(/<link rel="stylesheet" href="([^"]+\.css)">/i);
-  const usesCharacterTheme = Boolean(
-    stylesheet && basename(decodeURIComponent(stylesheet[1])).toLowerCase() !== 'tidewick-fantasy.css'
-  );
+  const stylesheets = [...secondaryHtml.matchAll(/<link rel="stylesheet" href="([^"]+\.css)">/gi)]
+    .map(match => basename(decodeURIComponent(match[1])).toLowerCase());
+  // Tidewick's pages link the shared tidewick-fantasy.css (alongside tidewick-vendor.css); other characters link only their own theme.
+  const usesCharacterTheme = stylesheets.length > 0 && !stylesheets.includes('tidewick-fantasy.css');
   return inputs.usesAttack || usesCharacterTheme
     ? prepareLocalThemePages(inputs.pagePaths)
     : preparePages(inputs.trackerPath, inputs.secondaryPath, inputs.inventoryPath, inputs.dataPath, inputs.journalPath);
@@ -376,6 +379,10 @@ async function validateCharacter(args) {
     if (/`(?:\.\.\/|\.\/)[^`<>]+\.(?:png|svg|jpe?g|webp)`/i.test(page.html)) {
       throw new Error(`${name} still contains a dynamic relative image reference.`);
     }
+    if (/<link\b[^>]*\brel="stylesheet"/i.test(page.html)) throw new Error(`${name} still links a stylesheet that was not inlined.`);
+    if (/<script\b[^>]*\bsrc=/i.test(page.html)) throw new Error(`${name} loads a script from outside the vault bundle.`);
+    const sameTabLink = [...page.html.matchAll(/<a\b[^>]*\bhref="https?:[^"]*"[^>]*>/gi)].find(match => !/\btarget="_blank"/i.test(match[0]));
+    if (sameTabLink) throw new Error(`${name} has an outside link that would replace the vault page; add target="_blank": ${sameTabLink[0]}`);
   }
   console.log(`Validated ${Object.keys(pages).length} character pages without writing vault data.`);
 }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#061522">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -35,7 +35,11 @@
     </section>
 
     <section class="viewer" id="viewer" hidden>
-      <iframe id="characterFrame" title="Unlocked character page" sandbox="allow-scripts allow-same-origin allow-downloads allow-popups" allow="web-share"></iframe>
+      <iframe id="characterFrame" title="Unlocked character page" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-downloads allow-popups allow-popups-to-escape-sandbox" allow="web-share"></iframe>
+      <div class="viewer-bar">
+        <button class="backup-note" id="backupNote" type="button" hidden></button>
+        <button class="lock-button" id="lockButton" type="button">Lock</button>
+      </div>
     </section>
   </main>
   <script src="vault.js" defer></script>
