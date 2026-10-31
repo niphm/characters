@@ -10,6 +10,6 @@ if not exist "%NODE%" (
   exit /b 1
 )
 
-"%NODE%" tools\vault-admin.mjs update-character --id tidewick --title "Tidewick Greyholt" --tracker "private-src/tidewick-greyholt-level-4.html" --spellbook "private-src/Tidewick Spells Level 4.html" --inventory "private-src/Tidewick Inventory Level 4.html" --data "private-src/Tidewick Data Level 4.html" --journal "private-src/Tidewick Journal Level 4.html"
+"%NODE%" tools\vault-admin.mjs update-character --id tidewick --title "Tidewick Grayholt" --tracker "private-src/tidewick/tidewick-main.html" --spellbook "private-src/tidewick/tidewick-spells.html" --inventory "private-src/tidewick/tidewick-inventory.html" --data "private-src/tidewick/tidewick-data.html" --journal "private-src/tidewick/tidewick-journal.html"
 echo.
 pause

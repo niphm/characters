@@ -9,10 +9,10 @@ const VERSION = 1;
 
 function usage() {
   console.log(`
-Tidewick encrypted-vault administrator
+Character vault administrator
 
 Create or replace a character bundle:
-  node tools/vault-admin.mjs init-character --id tidewick --tracker "private-src/tidewick-greyholt-level-4.html" --spellbook "private-src/Tidewick Spells Level 4.html" --inventory "private-src/Tidewick Inventory Level 4.html" --data "private-src/Tidewick Data Level 4.html" --journal "private-src/Tidewick Journal Level 4.html"
+  node tools/vault-admin.mjs init-character --id tidewick --title "Tidewick Grayholt" --tracker "private-src/tidewick/tidewick-main.html" --spellbook "private-src/tidewick/tidewick-spells.html" --inventory "private-src/tidewick/tidewick-inventory.html" --data "private-src/tidewick/tidewick-data.html" --journal "private-src/tidewick/tidewick-journal.html"
 
 Create a character bundle with an Attack page instead of a Spellbook:
   node tools/vault-admin.mjs init-character --id miku --title "Miku Noelani" --tracker "private-src/miku/miku-main.html" --attack "private-src/miku/miku-attack.html" --inventory "private-src/miku/miku-inventory.html" --data "private-src/miku/miku-data.html" --journal "private-src/miku/miku-journal.html"
@@ -21,7 +21,7 @@ Create a character bundle with both Spells and Attack pages:
   node tools/vault-admin.mjs init-character --id azrael --title "Azrael Ognyan" --tracker "private-src/azrael/azrael-main.html" --spellbook "private-src/azrael/azrael-spells.html" --attack "private-src/azrael/azrael-attack.html" --inventory "private-src/azrael/azrael-inventory.html" --data "private-src/azrael/azrael-data.html" --journal "private-src/azrael/azrael-journal.html"
 
 Update an existing character bundle while preserving all logins:
-  node tools/vault-admin.mjs update-character --id tidewick --tracker "private-src/tidewick-greyholt-level-4.html" --spellbook "private-src/Tidewick Spells Level 4.html" --inventory "private-src/Tidewick Inventory Level 4.html" --data "private-src/Tidewick Data Level 4.html" --journal "private-src/Tidewick Journal Level 4.html"
+  node tools/vault-admin.mjs update-character --id tidewick --title "Tidewick Grayholt" --tracker "private-src/tidewick/tidewick-main.html" --spellbook "private-src/tidewick/tidewick-spells.html" --inventory "private-src/tidewick/tidewick-inventory.html" --data "private-src/tidewick/tidewick-data.html" --journal "private-src/tidewick/tidewick-journal.html"
 
 Validate page inputs without creating or changing a vault bundle:
   node tools/vault-admin.mjs validate-character --id miku --tracker "private-src/miku/miku-main.html" --attack "private-src/miku/miku-attack.html" --inventory "private-src/miku/miku-inventory.html" --data "private-src/miku/miku-data.html" --journal "private-src/miku/miku-journal.html"
@@ -222,6 +222,12 @@ function resolvePageInputs(args) {
   return {pagePaths};
 }
 
+// The character's full name, stored in its bundle. Required so a build never falls back to another character's name.
+function requireTitle(args) {
+  if (!args.title?.trim()) throw new Error('Missing --title (the character\'s full name, e.g. --title "Tidewick Grayholt").');
+  return args.title.trim();
+}
+
 async function readPreparedPages(inputs) {
   await Promise.all(Object.values(inputs.pagePaths).map(path => access(path)));
   return prepareLocalThemePages(inputs.pagePaths);
@@ -229,6 +235,7 @@ async function readPreparedPages(inputs) {
 
 async function initCharacter(args) {
   const pageInputs = resolvePageInputs(args);
+  const title = requireTitle(args);
   const id = args.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
   await Promise.all(Object.values(pageInputs.pagePaths).map(path => access(path)));
   const adminPassword = await confirmedSecret('Administrator recovery passphrase', 'VAULT_ADMIN_PASSWORD');
@@ -237,7 +244,7 @@ async function initCharacter(args) {
   const payload = {
     version: VERSION,
     id,
-    title: args.title || 'Tidewick Greyholt',
+    title,
     entry: 'tracker',
     pages,
     generatedAt: new Date().toISOString()
@@ -280,6 +287,7 @@ async function recoverCharacterKey(characterId) {
 
 async function updateCharacter(args) {
   const pageInputs = resolvePageInputs(args);
+  const title = requireTitle(args);
   const id = args.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
   await Promise.all(Object.values(pageInputs.pagePaths).map(path => access(path)));
   await access(join(ROOT, 'vault', 'characters', `${id}.json`));
@@ -289,7 +297,7 @@ async function updateCharacter(args) {
   const payload = {
     version: VERSION,
     id,
-    title: args.title || 'Tidewick Greyholt',
+    title,
     entry: 'tracker',
     pages,
     generatedAt: new Date().toISOString()
