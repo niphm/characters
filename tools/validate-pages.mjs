@@ -14,6 +14,8 @@ import vm from 'node:vm';
 const ROOT = resolve(import.meta.dirname, '..');
 const SRC = join(ROOT, 'private-src');
 const SHARED = join(SRC, 'shared');
+// The "level-4" / "level-3-storm-ui" parts of these keys are history from when each key was created, not the
+// character's current level. Players never see them, so they stay as they are.
 const GROUP_KEY = 'tidewick-group-inventory-level-4-v1';
 
 const keysFor = (id, trackerKey = `${id}-tracker-level-4-v1`) => ({
@@ -26,9 +28,9 @@ const keysFor = (id, trackerKey = `${id}-tracker-level-4-v1`) => ({
 
 const CHARACTERS = [
   {
-    id: 'tidewick', name: 'Tidewick Greyholt', app: 'Tidewick Tracker', dir: SRC, theme: 'tidewick-theme.css',
+    id: 'tidewick', name: 'Tidewick Grayholt', app: 'Tidewick Tracker', dir: join(SRC, 'tidewick'), theme: 'tidewick-theme.css',
     keys: keysFor('tidewick', 'tidewick-tracker-level-3-storm-ui-v1'),
-    pages: {tracker: 'tidewick-greyholt-level-4.html', spells: 'Tidewick Spells Level 4.html', journal: 'Tidewick Journal Level 4.html', inventory: 'Tidewick Inventory Level 4.html', data: 'Tidewick Data Level 4.html'}
+    pages: {tracker: 'tidewick-main.html', spells: 'tidewick-spells.html', journal: 'tidewick-journal.html', inventory: 'tidewick-inventory.html', data: 'tidewick-data.html'}
   },
   {
     id: 'hestia', name: 'Hestia Hearthstone', app: 'Hestia Tracker', dir: join(SRC, 'hestia'), theme: 'hestia-theme.css',
@@ -200,11 +202,17 @@ for (const character of CHARACTERS) {
 
 // ---- Character-specific rules ----
 const tidewick = pagesById.tidewick;
-check(tidewick.tracker.includes('"hp":26') && tidewick.tracker.includes('"ac":12'), 'Tidewick: expected 26 HP and AC 12 defaults');
-for (const tracker of ['sorcery', 'l1', 'l2', 'innateSorcery', 'inspiration', 'favored', 'freeMageArmor', 'feyMisty', 'feyCommand']) {
+check(tidewick.tracker.includes('"hp":34') && tidewick.tracker.includes('"ac":12'), 'Tidewick: expected 34 HP and AC 12 defaults');
+for (const tracker of ['sorcery', 'l1', 'l2', 'l3', 'innateSorcery', 'inspiration', 'favored', 'sorcerousRestoration', 'freeMageArmor', 'feyMisty', 'feyCommand']) {
   check(tidewick.tracker.includes(`="${tracker}"`), `Tidewick tracker: missing ${tracker} controls`);
 }
-check(count(tidewick.spells, /<details class="spell"/g) === 20, 'Tidewick spellbook: expected 20 spells');
+for (const [tracker, expected] of [['sorcery', 5], ['l1', 4], ['l2', 3], ['l3', 2], ['hitDiceUsed', 5]]) {
+  check(count(tidewick.tracker, new RegExp(`data-toggle-array="${tracker}"`, 'g')) === expected, `Tidewick tracker: expected ${expected} ${tracker} pips`);
+}
+check(tidewick.tracker.includes('beforeShortRest: state =>') && tidewick.tracker.includes('id="restorationModal"') && tidewick.tracker.includes('useRestoration === true'),
+  'Tidewick tracker: Short Rest must ask before using Sorcerous Restoration');
+check(count(tidewick.spells, /<details class="spell"/g) === 22, 'Tidewick spellbook: expected 22 spells');
+for (const spell of ['Counterspell', 'Hypnotic Pattern']) check(tidewick.spells.includes(`spell-name">${spell}<`), `Tidewick spellbook: missing ${spell}`);
 check(count(tidewick.spells, /class="spell-incant"/g) >= 15, 'Tidewick spellbook: incantations are missing');
 
 const hestia = pagesById.hestia;
@@ -234,7 +242,7 @@ check(miku.attack.includes("pinnedId: 'unarmed'"), 'Miku attacks: Unarmed Strike
 
 const azrael = pagesById.azrael;
 check(azrael.tracker.includes('"hp":32') && azrael.tracker.includes('"ac":15'), 'Azrael: expected 32 HP and AC 15 defaults');
-check(!/(?:Kenpachi|Miku|Tidewick Greyholt)/i.test(Object.values(azrael).join('')), 'Azrael: contains a stale character reference');
+check(!/(?:Kenpachi|Miku|Tidewick Gr[ae]yholt)/i.test(Object.values(azrael).join('')), 'Azrael: contains a stale character reference');
 check(azrael.tracker.includes('id="azrael-nautical-preview"'), 'Azrael: nautical preview stylesheet is missing');
 for (const page of ['spells', 'attack', 'journal', 'inventory', 'data']) {
   check(!azrael[page].includes('azrael-nautical-preview'), `Azrael ${page}: main-page nautical preview leaked into another page`);
