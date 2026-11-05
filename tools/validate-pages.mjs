@@ -192,6 +192,11 @@ for (const character of CHARACTERS) {
     }
     if (engines.includes('attack.js')) {
       check(settings.attacksKey === keys.attacks, `${label}: attacksKey must stay "${keys.attacks}"`);
+      if (settings.seedUpdates?.length) check(settings.seedVersion > 1, `${label}: seedUpdates need a seedVersion above 1`);
+      for (const {id, to} of settings.seedUpdates || []) {
+        const seed = (settings.seedAttacks || []).find(attack => attack.id === id);
+        check(seed && Object.entries(to).every(([field, value]) => seed[field] === value), `${label}: seedUpdates for "${id}" must match its seed attack`);
+      }
       if (settings.rage) {
         check(settings.rage.trackerKey === keys.tracker, `${label}: rage.trackerKey must be the tracker key`);
         for (const optional of OPTIONAL_IDS['attack.js']) check(ids.includes(optional), `${label}: Rage needs id="${optional}"`);
@@ -235,9 +240,14 @@ check(kenpachi.attack.includes('attackRageEligible'), 'Kenpachi attacks: Rage da
 check(!/miku/i.test(Object.values(kenpachi).join('')), 'Kenpachi: contains a leftover Miku reference');
 
 const miku = pagesById.miku;
-for (const fragment of ['<strong>+2</strong><span>Proficiency</span>', '<strong>+3</strong><span>Initiative</span>', '<strong>45 ft</strong><span>Speed</span>', '<strong>11</strong><span>Passive Perception</span>']) {
+for (const fragment of ['<strong>+3</strong><span>Proficiency</span>', '<strong>+3</strong><span>Initiative</span>', '<strong>45 ft</strong><span>Speed</span>', '<strong>11</strong><span>Passive Perception</span>']) {
   check(miku.tracker.includes(fragment), `Miku: missing combat statistic ${fragment}`);
 }
+check(miku.tracker.includes('"hp":43') && miku.tracker.includes('"ac":14'), 'Miku: expected 43 HP and AC 14 defaults');
+for (const [tracker, expected] of [['focusUsed', 5], ['thunderUsed', 3], ['hitDiceUsed', 5]]) {
+  check(count(miku.tracker, new RegExp(`data-toggle-array="${tracker}"`, 'g')) === expected, `Miku tracker: expected ${expected} ${tracker} pips`);
+}
+check(miku.tracker.includes('data-toggle-bool="largeFormUsed"') && miku.tracker.includes('state.largeFormUsed = false'), 'Miku tracker: Large Form must be tracked and reset on a Long Rest');
 check(miku.attack.includes("pinnedId: 'unarmed'"), 'Miku attacks: Unarmed Strike must stay pinned');
 
 const azrael = pagesById.azrael;
