@@ -55,7 +55,18 @@ const CHARACTERS = [
 ];
 
 // Elements a shared script only touches when the page opts in.
-const OPTIONAL_IDS = {'tracker.js': ['conditions', 'concentration'], 'attack.js': ['rageMode', 'attackRageEligible']};
+const OPTIONAL_IDS = {
+  'tracker.js': ['conditions', 'concentration', 'restorationModal', 'restorationText', 'restorationUse'],
+  'attack.js': ['rageMode', 'attackRageEligible']
+};
+// A level-up's seedUpdates must lead to the page's current starting list, or new and existing players would differ.
+const checkSeedUpdates = (label, settings, seedList) => {
+  if (settings.seedUpdates?.length) check(settings.seedVersion > 1, `${label}: seedUpdates need a seedVersion above 1`);
+  for (const {id, to} of settings.seedUpdates || []) {
+    const seed = (seedList || []).find(entry => entry.id === id);
+    check(seed && Object.entries(to).every(([field, value]) => seed[field] === value), `${label}: seedUpdates for "${id}" must match its starting entry`);
+  }
+};
 
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
@@ -166,6 +177,12 @@ for (const character of CHARACTERS) {
       for (const match of text.matchAll(/data-toggle-(?:array|bool)="([^"]+)"/g)) {
         check(match[1] in defaults, `${label}: tracker control "${match[1]}" has no default value`);
       }
+      const restoration = settings.sorcerousRestoration;
+      if (restoration) {
+        for (const id of ['restorationModal', 'restorationText', 'restorationUse']) check(ids.includes(id), `${label}: Sorcerous Restoration needs id="${id}"`);
+        check(Array.isArray(defaults[restoration.pool]) && defaults[restoration.used] === false && restoration.regain > 0, `${label}: sorcerousRestoration pool/used/regain do not match the defaults`);
+        check(text.includes(`data-toggle-bool="${restoration.used}"`), `${label}: Sorcerous Restoration needs a data-toggle-bool="${restoration.used}" pip`);
+      }
     }
     if (engines.includes('journal.js')) {
       check(settings.journalKey === keys.journal, `${label}: journalKey must stay "${keys.journal}"`);
@@ -183,6 +200,7 @@ for (const character of CHARACTERS) {
       }
       const seedIds = (settings.seedItems || []).map(item => item.id);
       check(new Set(seedIds).size === seedIds.length, `${label}: seed items need unique ids`);
+      checkSeedUpdates(label, settings, settings.seedItems);
     }
     if (engines.includes('data.js')) {
       check(settings.app === app, `${label}: backup app name must stay "${app}" or old backups will not import`);
@@ -192,11 +210,7 @@ for (const character of CHARACTERS) {
     }
     if (engines.includes('attack.js')) {
       check(settings.attacksKey === keys.attacks, `${label}: attacksKey must stay "${keys.attacks}"`);
-      if (settings.seedUpdates?.length) check(settings.seedVersion > 1, `${label}: seedUpdates need a seedVersion above 1`);
-      for (const {id, to} of settings.seedUpdates || []) {
-        const seed = (settings.seedAttacks || []).find(attack => attack.id === id);
-        check(seed && Object.entries(to).every(([field, value]) => seed[field] === value), `${label}: seedUpdates for "${id}" must match its seed attack`);
-      }
+      checkSeedUpdates(label, settings, settings.seedAttacks);
       if (settings.rage) {
         check(settings.rage.trackerKey === keys.tracker, `${label}: rage.trackerKey must be the tracker key`);
         for (const optional of OPTIONAL_IDS['attack.js']) check(ids.includes(optional), `${label}: Rage needs id="${optional}"`);
@@ -214,17 +228,22 @@ for (const tracker of ['sorcery', 'l1', 'l2', 'l3', 'innateSorcery', 'inspiratio
 for (const [tracker, expected] of [['sorcery', 5], ['l1', 4], ['l2', 3], ['l3', 2], ['hitDiceUsed', 5]]) {
   check(count(tidewick.tracker, new RegExp(`data-toggle-array="${tracker}"`, 'g')) === expected, `Tidewick tracker: expected ${expected} ${tracker} pips`);
 }
-check(tidewick.tracker.includes('beforeShortRest: state =>') && tidewick.tracker.includes('id="restorationModal"') && tidewick.tracker.includes('useRestoration === true'),
-  'Tidewick tracker: Short Rest must ask before using Sorcerous Restoration');
+check(tidewick.tracker.includes("sorcerousRestoration: {pool: 'sorcery', used: 'sorcerousRestoration', regain: 2}"), 'Tidewick tracker: Short Rest must ask before using Sorcerous Restoration');
 check(count(tidewick.spells, /<details class="spell"/g) === 22, 'Tidewick spellbook: expected 22 spells');
 for (const spell of ['Counterspell', 'Hypnotic Pattern']) check(tidewick.spells.includes(`spell-name">${spell}<`), `Tidewick spellbook: missing ${spell}`);
 check(count(tidewick.spells, /class="spell-incant"/g) >= 15, 'Tidewick spellbook: incantations are missing');
 
 const hestia = pagesById.hestia;
-check(hestia.tracker.includes('"hp":26') && hestia.tracker.includes('"ac":14'), 'Hestia: expected 26 HP and AC 14 defaults');
-for (const tracker of ['sorceryUsed', 'level1Used', 'level2Used', 'innateUsed', 'tidesUsed', 'freeCastsUsed', 'inspirationUsed']) {
+check(hestia.tracker.includes('"hp":31') && hestia.tracker.includes('"ac":14'), 'Hestia: expected 31 HP and AC 14 defaults');
+for (const tracker of ['sorceryUsed', 'level1Used', 'level2Used', 'level3Used', 'innateUsed', 'tidesUsed', 'restorationUsed', 'freeCastsUsed', 'inspirationUsed']) {
   check(hestia.tracker.includes(`="${tracker}"`), `Hestia tracker: missing ${tracker} controls`);
 }
+for (const [tracker, expected] of [['sorceryUsed', 5], ['level1Used', 4], ['level2Used', 3], ['level3Used', 2], ['hitDiceUsed', 5]]) {
+  check(count(hestia.tracker, new RegExp(`data-toggle-array="${tracker}"`, 'g')) === expected, `Hestia tracker: expected ${expected} ${tracker} pips`);
+}
+check(hestia.tracker.includes("sorcerousRestoration: {pool: 'sorceryUsed', used: 'restorationUsed', regain: 2}"), 'Hestia tracker: Short Rest must ask before using Sorcerous Restoration');
+for (const spell of ['Counterspell', 'Fireball']) check(hestia.spells.includes(`spell-name">${spell}<`), `Hestia spellbook: missing ${spell}`);
+check(!hestia.spells.includes('spell-name">Spider Climb<') && !hestia.tracker.includes('Spider Climb'), 'Hestia: Spider Climb was dropped at level 5');
 const srdIds = new Set([...hestia.spells.matchAll(/data-srd-spell="([^"]+)"/g)].map(match => match[1]));
 check(srdIds.size === 12, `Hestia spellbook: expected 12 Wild Magic spell links, found ${srdIds.size}`);
 for (const spell of srdIds) check(hestia.spells.includes(`'${spell}': {`), `Hestia spellbook: no SRD text for ${spell}`);
@@ -251,7 +270,7 @@ check(miku.tracker.includes('data-toggle-bool="largeFormUsed"') && miku.tracker.
 check(miku.attack.includes("pinnedId: 'unarmed'"), 'Miku attacks: Unarmed Strike must stay pinned');
 
 const azrael = pagesById.azrael;
-check(azrael.tracker.includes('"hp":32') && azrael.tracker.includes('"ac":15'), 'Azrael: expected 32 HP and AC 15 defaults');
+check(azrael.tracker.includes('"hp":37') && azrael.tracker.includes('"ac":15'), 'Azrael: expected 37 HP and AC 15 defaults');
 check(!/(?:Kenpachi|Miku|Tidewick Gr[ae]yholt)/i.test(Object.values(azrael).join('')), 'Azrael: contains a stale character reference');
 check(azrael.tracker.includes('id="azrael-nautical-preview"'), 'Azrael: nautical preview stylesheet is missing');
 for (const page of ['spells', 'attack', 'journal', 'inventory', 'data']) {
@@ -262,15 +281,21 @@ for (const page of Object.keys(azrael)) {
   const spells = azrael[page].indexOf('aria-label="Spells"');
   check(spells >= 0 && azrael[page].indexOf('aria-label="Attack"') > spells, `Azrael ${page}: Attack navigation must come right after Spells`);
 }
-for (const tracker of ['channelDivinityUsed', 'warPriestUsed', 'level1Used', 'level2Used']) check(azrael.tracker.includes(`data-toggle-array="${tracker}"`), `Azrael: missing ${tracker} controls`);
+// Level 5: Tempest Domain (the War Domain's War Priest and Guided Strike are gone); Channel Divinity 3 uses as on his sheet.
+for (const [tracker, expected] of [['channelDivinityUsed', 3], ['wrathUsed', 3], ['level1Used', 4], ['level2Used', 3], ['level3Used', 2], ['hitDiceUsed', 5]]) {
+  check(count(azrael.tracker, new RegExp(`data-toggle-array="${tracker}"`, 'g')) === expected, `Azrael tracker: expected ${expected} ${tracker} pips`);
+}
+check(azrael.tracker.includes('state.wrathUsed = [];'), 'Azrael: Long Rest must restore Wrath of the Storm');
+check(!/War Priest|warPriest|Guided Strike|guided-strike|War Domain/.test(Object.values(azrael).join('')), 'Azrael: leftover War Domain feature');
 check(azrael.tracker.includes('state.channelDivinityUsed = (state.channelDivinityUsed || []).slice(0, -1);'), 'Azrael: Short Rest must restore exactly one Channel Divinity use');
 check(count(azrael.tracker, /data-channel-option="/g) === 3, 'Azrael: expected three Channel Divinity option links');
-for (const option of ['Divine Spark', 'Turn Undead', 'Guided Strike']) check(azrael.tracker.includes(`>${option}</button>`), `Azrael: missing ${option} pop-up link`);
+for (const option of ['Divine Spark', 'Turn Undead', 'Destructive Wrath']) check(azrael.tracker.includes(`>${option}</button>`), `Azrael: missing ${option} pop-up link`);
+check(azrael.tracker.includes("'destructive-wrath': {") && azrael.tracker.includes('Sear Undead'), 'Azrael: Destructive Wrath and Sear Undead pop-up text is missing');
 check(azrael.tracker.includes('id="channelDivinityModal" aria-hidden="true"') && azrael.tracker.includes('role="dialog" aria-modal="true"') && azrael.tracker.includes("event.key === 'Escape'"), 'Azrael: Channel Divinity pop-up lost its dialog behaviour');
 check(!azrael.tracker.includes('>Cleric Features</h2>'), 'Azrael: Cleric Features card should be removed');
-check(azrael.tracker.indexOf('>War Priest</h2>') < azrael.tracker.indexOf('>Channel Divinity</h2>'), 'Azrael: War Priest card must appear before Channel Divinity');
+check(azrael.tracker.indexOf('>Wrath of the Storm</h2>') < azrael.tracker.indexOf('>Channel Divinity</h2>'), 'Azrael: Wrath of the Storm card must appear before Channel Divinity');
 for (const score of ['14', '10', '13', '8', '16', '12']) check(azrael.tracker.includes(`attribute-score">${score}<`), `Azrael: missing ability score ${score}`);
-for (const spell of ['Thaumaturgy', 'Poison Spray', 'Guidance', 'Sacred Flame', 'Resistance', 'Toll the Dead', 'Ray of Sickness', 'Fog Cloud', 'Thunderwave', 'Sanctuary', 'Command', 'Healing Word', 'Cure Wounds', 'Gust of Wind', 'Aid', 'Hold Person', 'Spiritual Weapon', 'Shatter', 'Thunderous Rebuke', 'Divine Spark', 'Turn Undead']) {
+for (const spell of ['Thaumaturgy', 'Poison Spray', 'Guidance', 'Sacred Flame', 'Resistance', 'Toll the Dead', 'Mending', 'Ray of Sickness', 'Fog Cloud', 'Thunderwave', 'Command', 'Healing Word', 'Cure Wounds', 'Shield of Faith', 'Create or Destroy Water', 'Gust of Wind', 'Aid', 'Hold Person', 'Spiritual Weapon', 'Shatter', 'Spirit Guardians', 'Mass Healing Word', 'Call Lightning', 'Sleet Storm', 'Divine Spark', 'Turn Undead', 'Destructive Wrath', 'Wrath of the Storm (Thunderous Rebuke)']) {
   check(azrael.spells.includes(`name:'${spell}'`), `Azrael spells: missing ${spell}`);
 }
 check(!/classes:\[[^\]]*'attack'/.test(azrael.spells), 'Azrael spells: spell records must not inherit Attack page card styling');
