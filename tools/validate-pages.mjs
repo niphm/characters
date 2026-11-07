@@ -250,10 +250,15 @@ for (const spell of srdIds) check(hestia.spells.includes(`'${spell}': {`), `Hest
 check(hestia.spells.includes('System Reference Document 5.2.1') && hestia.spells.includes('creativecommons.org/licenses/by/4.0'), 'Hestia spellbook: the SRD 5.2.1 credit line is required');
 
 const kenpachi = pagesById.kenpachi;
-check(kenpachi.tracker.includes('"hp":41') && kenpachi.tracker.includes('"ac":16'), 'Kenpachi: expected 41 HP and AC 16 defaults');
+check(kenpachi.tracker.includes('"hp":51') && kenpachi.tracker.includes('"ac":16'), 'Kenpachi: expected 51 HP and AC 16 defaults');
 check(!kenpachi.tracker.includes('tempHp'), 'Kenpachi: temporary HP counter should be absent');
-check(!/data-adjust="hp"[^>]*data-max=/.test(kenpachi.tracker), 'Kenpachi: HP controls should allow values above 41');
-for (const tracker of ['rageUsed', 'adrenalineUsed']) check(kenpachi.tracker.includes(`data-toggle-array="${tracker}"`), `Kenpachi: ${tracker} tracker is missing`);
+check(!/data-adjust="hp"[^>]*data-max=/.test(kenpachi.tracker), 'Kenpachi: HP controls should allow values above 51');
+// Level 5: Rage stays 3; Adrenaline Rush uses follow the proficiency bonus (3).
+for (const [tracker, expected] of [['rageUsed', 3], ['adrenalineUsed', 3], ['hitDiceUsed', 5]]) {
+  check(count(kenpachi.tracker, new RegExp(`data-toggle-array="${tracker}"`, 'g')) === expected, `Kenpachi tracker: expected ${expected} ${tracker} pips`);
+}
+for (const fragment of ['<strong>+3</strong><span>Proficiency</span>', '<strong>40 ft</strong><span>Speed</span>']) check(kenpachi.tracker.includes(fragment), `Kenpachi: missing combat statistic ${fragment}`);
+check(kenpachi.attack.includes('<h2>Extra Attack</h2>'), 'Kenpachi attacks: Extra Attack card is missing');
 for (const weapon of ['Pistol', 'Warhammer', 'Javelin']) check(kenpachi.attack.includes(`name:'${weapon}'`), `Kenpachi attacks: missing seeded ${weapon}`);
 check(kenpachi.attack.includes('attackRageEligible'), 'Kenpachi attacks: Rage damage support is missing');
 check(!/miku/i.test(Object.values(kenpachi).join('')), 'Kenpachi: contains a leftover Miku reference');
